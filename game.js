@@ -93,7 +93,7 @@ const LEVEL_THEMES = [
     background: "#000000",
     gridColor: "#111111",
     wallColor: "#333333",
-    message: "Bem-vindo ao Snake Arcade!",
+    message: "Bem-vindo ao Cobra Arcade!",
   },
   {
     // Nível 2
@@ -353,12 +353,18 @@ class SnakeGame {
     this.nextDirection = Direction.RIGHT
     this.activePowerUp = PowerUpType.NONE
     this.powerUpTimeLeft = 0
+    this.gameOver = false
 
     // Resetar UI
     this.scoreElement.textContent = this.score
     this.levelElement.textContent = this.level
     this.timeRemainingElement.textContent = this.timeLeft
     this.powerUpIndicator.classList.add("hidden")
+
+    // Limpar obstáculos
+    this.obstacles = []
+    this.portals = []
+    this.movingObstacles = []
 
     // Inicializar cobra
     this.initSnake()
@@ -372,11 +378,22 @@ class SnakeGame {
 
   initSnake() {
     // Criar cobra com 3 segmentos
-    this.snake = [
-      { x: 5, y: 10 },
-      { x: 4, y: 10 },
-      { x: 3, y: 10 },
-    ]
+    // Posição inicial no centro para o modo labirinto
+    if (this.gameMode === GameMode.MAZE) {
+      const centerX = Math.floor(GRID_SIZE / 2)
+      const centerY = Math.floor(GRID_SIZE / 2)
+      this.snake = [
+        { x: centerX, y: centerY },
+        { x: centerX - 1, y: centerY },
+        { x: centerX - 2, y: centerY },
+      ]
+    } else {
+      this.snake = [
+        { x: 5, y: 10 },
+        { x: 4, y: 10 },
+        { x: 3, y: 10 },
+      ]
+    }
   }
 
   initLevel() {
@@ -392,15 +409,15 @@ class SnakeGame {
     document.documentElement.style.setProperty("--level-wall", theme.wallColor)
 
     // Adicionar obstáculos baseados no nível
-    if (this.level >= 2) {
+    if (this.level >= 2 && this.gameMode !== GameMode.MAZE) {
       this.addWalls()
     }
 
-    if (this.level >= 3) {
+    if (this.level >= 3 && this.gameMode !== GameMode.MAZE) {
       this.addPortals()
     }
 
-    if (this.level >= 4) {
+    if (this.level >= 4 && this.gameMode !== GameMode.MAZE) {
       this.addMovingObstacles()
     }
 
@@ -458,12 +475,78 @@ class SnakeGame {
   }
 
   generateMaze() {
-    // Geração simples de labirinto
-    // Adicionar paredes horizontais
+    // Limpar obstáculos existentes para evitar sobreposições
+    this.obstacles = []
+
+    // Definir área segura ao redor da posição inicial da cobra
+    const safeZone = []
+    const centerX = Math.floor(GRID_SIZE / 2)
+    const centerY = Math.floor(GRID_SIZE / 2)
+
+    // Criar uma zona segura de 5x5 no centro
+    for (let x = centerX - 2; x <= centerX + 2; x++) {
+      for (let y = centerY - 2; y <= centerY + 2; y++) {
+        if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+          safeZone.push({ x, y })
+        }
+      }
+    }
+
+    // Função para verificar se uma posição está na zona segura
+    const isInSafeZone = (x, y) => {
+      return safeZone.some((pos) => pos.x === x && pos.y === y)
+    }
+
+    // Adicionar bordas externas
+    for (let x = 0; x < GRID_SIZE; x++) {
+      // Borda superior e inferior
+      if (x % 3 !== 0) {
+        // Deixar algumas aberturas
+        if (!isInSafeZone(x, 0)) {
+          this.obstacles.push({
+            type: ObstacleType.WALL,
+            x: x,
+            y: 0,
+          })
+        }
+
+        if (!isInSafeZone(x, GRID_SIZE - 1)) {
+          this.obstacles.push({
+            type: ObstacleType.WALL,
+            x: x,
+            y: GRID_SIZE - 1,
+          })
+        }
+      }
+    }
+
+    for (let y = 0; y < GRID_SIZE; y++) {
+      // Borda esquerda e direita
+      if (y % 3 !== 0) {
+        // Deixar algumas aberturas
+        if (!isInSafeZone(0, y)) {
+          this.obstacles.push({
+            type: ObstacleType.WALL,
+            x: 0,
+            y: y,
+          })
+        }
+
+        if (!isInSafeZone(GRID_SIZE - 1, y)) {
+          this.obstacles.push({
+            type: ObstacleType.WALL,
+            x: GRID_SIZE - 1,
+            y: y,
+          })
+        }
+      }
+    }
+
+    // Adicionar paredes horizontais internas
     for (let i = 0; i < 3; i++) {
       const y = 5 + i * 5
       for (let x = 0; x < GRID_SIZE; x++) {
-        if (x % 4 !== 0) {
+        if (x % 4 !== 0 && !isInSafeZone(x, y) && !this.isSnakeCell(x, y)) {
           this.obstacles.push({
             type: ObstacleType.WALL,
             x: x,
@@ -473,11 +556,11 @@ class SnakeGame {
       }
     }
 
-    // Adicionar paredes verticais
+    // Adicionar paredes verticais internas
     for (let i = 0; i < 3; i++) {
       const x = 5 + i * 5
       for (let y = 0; y < GRID_SIZE; y++) {
-        if (y % 4 !== 0 && !this.isObstacle(x, y)) {
+        if (y % 4 !== 0 && !isInSafeZone(x, y) && !this.isSnakeCell(x, y) && !this.isObstacle(x, y)) {
           this.obstacles.push({
             type: ObstacleType.WALL,
             x: x,
@@ -486,6 +569,24 @@ class SnakeGame {
         }
       }
     }
+
+    // Adicionar alguns blocos aleatórios para tornar o labirinto mais interessante
+    const randomBlocks = 10
+    for (let i = 0; i < randomBlocks; i++) {
+      const x = 2 + Math.floor(Math.random() * (GRID_SIZE - 4))
+      const y = 2 + Math.floor(Math.random() * (GRID_SIZE - 4))
+
+      if (!isInSafeZone(x, y) && !this.isSnakeCell(x, y) && !this.isObstacle(x, y)) {
+        this.obstacles.push({
+          type: ObstacleType.WALL,
+          x: x,
+          y: y,
+        })
+      }
+    }
+
+    // Adicionar um par de portais no modo labirinto
+    this.addPortals()
   }
 
   spawnFood() {
@@ -539,6 +640,8 @@ class SnakeGame {
   getRandomEmptyCell() {
     let cell
     let isOccupied
+    let attempts = 0
+    const maxAttempts = 100 // Evitar loop infinito
 
     do {
       cell = {
@@ -552,6 +655,28 @@ class SnakeGame {
         this.isPortal(cell.x, cell.y) ||
         (this.food && this.food.x === cell.x && this.food.y === cell.y) ||
         (this.powerUp && this.powerUp.x === cell.x && this.powerUp.y === cell.y)
+
+      attempts++
+
+      // Se não conseguir encontrar uma célula vazia após muitas tentativas
+      if (attempts >= maxAttempts) {
+        // Procurar sistematicamente por uma célula vazia
+        for (let x = 0; x < GRID_SIZE; x++) {
+          for (let y = 0; y < GRID_SIZE; y++) {
+            if (
+              !this.isSnakeCell(x, y) &&
+              !this.isObstacle(x, y) &&
+              !this.isPortal(x, y) &&
+              !(this.food && this.food.x === x && this.food.y === y) &&
+              !(this.powerUp && this.powerUp.x === x && this.powerUp.y === y)
+            ) {
+              return { x, y }
+            }
+          }
+        }
+        // Se ainda não encontrou, retornar uma posição padrão
+        return { x: 1, y: 1 }
+      }
     } while (isOccupied)
 
     return cell
@@ -593,7 +718,9 @@ class SnakeGame {
     }
 
     // Continuar loop do jogo
-    requestAnimationFrame(this.gameLoop.bind(this))
+    if (!this.gameOver) {
+      requestAnimationFrame(this.gameLoop.bind(this))
+    }
   }
 
   update() {
@@ -687,7 +814,12 @@ class SnakeGame {
 
     // Acelerar cobra levemente
     if (this.gameSpeed > MAX_SPEED && this.snake.length % SPEED_THRESHOLD === 0) {
-      this.gameSpeed -= SPEED_INCREMENT
+      if (this.gameMode === GameMode.MAZE) {
+        // Aceleração mais gradual no modo labirinto
+        this.gameSpeed -= SPEED_INCREMENT / 2
+      } else {
+        this.gameSpeed -= SPEED_INCREMENT
+      }
     }
   }
 
@@ -1052,7 +1184,12 @@ class SnakeGame {
     this.levelUpScreen.classList.remove("hidden")
 
     // Aumentar velocidade do jogo
-    this.gameSpeed = Math.max(MAX_SPEED, this.gameSpeed - SPEED_INCREMENT * 2)
+    if (this.gameMode === GameMode.MAZE) {
+      // Aceleração mais gradual ao subir de nível no modo labirinto
+      this.gameSpeed = Math.max(MAX_SPEED, this.gameSpeed - SPEED_INCREMENT)
+    } else {
+      this.gameSpeed = Math.max(MAX_SPEED, this.gameSpeed - SPEED_INCREMENT * 2)
+    }
   }
 
   continueToNextLevel() {
@@ -1139,6 +1276,6 @@ class SnakeGame {
 
 // Inicializar jogo quando o DOM estiver carregado
 document.addEventListener("DOMContentLoaded", () => {
-  new SnakeGame() 
+  new SnakeGame()
 })
 
