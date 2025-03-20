@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Cobra Arcade Deluxe</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1 class="title glow">COBRA ARCADE DELUXE</h1>
+            <div class="score-container">
+                <p>Pontos: <span id="score">0</span></p>
+                <p>Nível: <span id="level">1</span></p>
+                <p>Recorde: <span id="high-score">0</span></p>
+            </div>
+        </header>
+
+        <div class="game-area">
+            <canvas id="game-canvas"></canvas>
+            
+            <div id="start-screen" class="overlay">
+                <div class="overlay-content">
+                    <h2>COMO JOGAR</h2>
+                    <ul>
+                        <li>• Use as setas para controlar a cobra</li>
+                        <li>• Coma alimentos para crescer e ganhar pontos</li>
+                        <li>• Colete power-ups para habilidades especiais</li>
+                        <li>• Evite bater nas paredes, obstáculos e em si mesma</li>
+                        <li>• Alcance a pontuação alvo para avançar ao próximo nível</li>
+                    </ul>
+                    <div class="power-up-guide">
+                        <h3>POWER-UPS</h3>
+                        <div class="power-up-list">
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #00FFFF;"></div>
+                                <span>Velocidade</span>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #FFFF00;"></div>
+                                <span>2x Pontos</span>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #FF00FF;"></div>
+                                <span>Invencibilidade</span>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #FF8800;"></div>
+                                <span>Modo Fantasma</span>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #8800FF;"></div>
+                                <span>Câmera Lenta</span>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" style="background-color: #00FF88;"></div>
+                                <span>Ímã</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="food-guide">
+                        <h3>ALIMENTOS ESPECIAIS</h3>
+                        <div class="food-list">
+                            <div class="food-item">
+                                <div class="food-icon red-food"></div>
+                                <span>Normal (1 pt)</span>
+                            </div>
+                            <div class="food-item">
+                                <div class="food-icon gold-food"></div>
+                                <span>Dourado (5 pts)</span>
+                            </div>
+                            <div class="food-item">
+                                <div class="food-icon rainbow-food"></div>
+                                <span>Arco-íris (10 pts)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="game-modes">
+                        <h3>MODOS DE JOGO</h3>
+                        <div class="mode-buttons">
+                            <button id="classic-mode" class="mode-button selected">CLÁSSICO</button>
+                            <button id="time-mode" class="mode-button">CONTRA O TEMPO</button>
+                            <button id="maze-mode" class="mode-button">LABIRINTO</button>
+                        </div>
+                    </div>
+                    <button id="start-button" class="arcade-button">INICIAR JOGO</button>
+                </div>
+            </div>
+            
+            <div id="level-up-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2 class="glow">NÍVEL CONCLUÍDO!</h2>
+                    <p>Você alcançou o Nível <span id="new-level">2</span></p>
+                    <p class="level-description">Novos obstáculos e jogabilidade mais rápida!</p>
+                    <button id="continue-button" class="arcade-button">CONTINUAR</button>
+                </div>
+            </div>
+            
+            <div id="game-over-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>FIM DE JOGO</h2>
+                    <p>Pontuação Final: <span id="final-score">0</span></p>
+                    <p>Nível Alcançado: <span id="final-level">1</span></p>
+                    <div id="new-high-score" class="hidden">
+                        <p class="glow">NOVO RECORDE!</p>
+                    </div>
+                    <button id="restart-button" class="arcade-button">JOGAR NOVAMENTE</button>
+                    <button id="menu-button" class="arcade-button secondary">MENU PRINCIPAL</button>
+                </div>
+            </div>
+            
+            <div id="pause-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>PAUSADO</h2>
+                    <button id="resume-button" class="arcade-button">CONTINUAR</button>
+                    <button id="quit-button" class="arcade-button secondary">SAIR</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <div id="power-up-indicator" class="power-up-indicator hidden">
+                <div id="power-up-bar" class="power-up-bar"></div>
+                <p id="power-up-text">POWER UP!</p>
+            </div>
+            
+            <div class="control-panel">
+                <button id="pause-button" class="control-panel-button">
+                    <span>❚❚</span>
+                </button>
+                <div id="time-display" class="time-display hidden">
+                    <span id="time-remaining">60</span>s
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-controls" class="mobile-controls">
+            <button id="up-button" class="control-button">↑</button>
+            <div class="horizontal-controls">
+                <button id="left-button" class="control-button">←</button>
+                <button id="right-button" class="control-button">→</button>
+            </div>
+            <button id="down-button" class="control-button">↓</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script> 
+</body>
+</html>
+
